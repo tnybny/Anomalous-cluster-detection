@@ -9,16 +9,20 @@ rm(list = ls(all = T))
 require(R.matlab)
 require(rworldmap)
 require(colorspace)
+require(corpcor)
+
 # set the color palette
 palette(diverge_hsv(21))
 
 # load the baseline
-baselinepath <- "./CSVs/Scanning_window/Baseline/"
+baselinepath <- paste("~/Google Drive/NCSU/STAC lab research/",
+                      "Monster Ridges project/Data/CSVs/",
+                      "Scanning_window/Baseline/", sep = "")
 meanBase <- readMat(paste(baselinepath, "meanBaseline.mat", sep = ""))$meanBase
-MDthresh <- double(1)
-dir <- double(1)
-toRemove <- numeric()
-p <- integer(1)
+dir <- NULL # direction of extreme (warm or cold)
+toRemove <- NULL # vector that holds dimensions that are redundant and cause
+# covariance matrix singularity
+p <- integer(1) # dimensionality of trimmed covariance matrix
 
 calcMDsqFromMVG <- function(rectGrid, meanBase, origYData, day, data)
 {
@@ -39,36 +43,31 @@ calcMDsqFromMVG <- function(rectGrid, meanBase, origYData, day, data)
     # MD: Mahalanobis distance of rectangle observation from baseline
     # dir: not returned, but explicitly sets direction of extreme
     COV = covBaseRectScore(rectGrid, origYData, day)
-    mu <- double()
-    x <- double()
-    for(i in 1:nrow(rectGrid))
-    {
-        x <- c(x, data[rectGrid[i, 1], rectGrid[i, 2]])
-        mu <- c(mu, meanBase[day, rectGrid[i, 1], rectGrid[i, 2]])
-    }
-    if(length(toRemove) != 0)
-    {
-        x <- x[-toRemove]
-        mu <- mu[-toRemove]
-    }
+    x <- sapply(1:nrow(rectGrid), FUN = function(i, a, b) b[a[i, 1], a[i, 2]],
+                rectGrid, data)
+    mu <- sapply(1:nrow(rectGrid),
+                 FUN = function(i, a, b, c) b[c, a[i, 1], a[i, 2]],
+                 rectGrid, meanBase, day)
+    # if(length(toRemove) != 0)
+    # {
+    #     x <- x[-toRemove]
+    #     mu <- mu[-toRemove]
+    #     rG <- rectGrid[-toRemove, ]
+    # }else
+         rG <- rectGrid
     p <<- length(mu)
     # if window spans warm and cold extremes (Quadrants II or IV), skip
-    if(!(all((rectGrid[-toRemove, 3] - mu) >= 0) |
-             all((rectGrid[-toRemove, 3] - mu) <= 0)))
+    if(!(all((rG[, 3] - mu) >= 0) |
+             all((rG[, 3] - mu) <= 0)))
     {
         p <<- 0
         return(0)
     }
     # find direction of anomalous behavior
-    if(mean(rectGrid[, 3]) > mean(mu))
-        dir <<- 1
-    else
-        dir <<- -1
-    MDsq <- mahalanobis(x, center = mu, cov = COV) # squared mahalanobis distance
-#     if(length(mu) > 1)
-#     {
-#         MDsq <- MDsq / dim(COV)[2]   # correct for dimensionality effect
-#     }
+    dir <<- ifelse(mean(rG[, 3]) > mean(mu), 1, -1)
+    iCOV <- pseudoinverse(COV)
+    MDsq <- mahalanobis(x, center = mu, cov = iCOV, inverted = TRUE) 
+    # squared mahalanobis distance
     return(MDsq)
 }
 
@@ -88,62 +87,41 @@ covBaseRectScore <- function(rectGrid, origYData, day)
     # COV: covariance matrix
     # toRemove: not returned, but sets the grid boxes to remove from 
     # consideration because of multicollinearity
-    d <- matrix(, nrow = 35)
+    d <- matrix(, nrow = 175)
     for(g in 1:nrow(rectGrid))
     {
         lat = rectGrid[g, 1]
         long = rectGrid[g, 2]
-        x <- double()
-        for(year in 1:35)
-        {
-            x <- c(x, origYData[[year]][day, lat, long])
-        }
+        x <- NULL
+        timeWindow <- (day - 2):(day + 2)
+        x <- unlist(lapply(origYData, "[", timeWindow, lat, long)) # 175 values
         d <- cbind(d, x)
     }
     d <- d[, -1]
-    if(is.vector(d))
-    {
-        COV <- var(d)
-    } else {
-        toRemove <<- numeric()
-        if(det(cov(d)) < 10 ^ (-5))
-        {
-            # account for perfect multicollinearity
-            for(k in 1:(ncol(d) - 1))
-            {
-                for(l in (k + 1):ncol(d))
-                {
-                    if(cor(d[, k], d[, l]) > 0.95 & !(l %in% toRemove))
-                    {
-                        toRemove <<- c(toRemove, l)
-                    }
-                }
-            }
-            d <- d[, -toRemove]
-        }
-        if(is.atomic(d) || is.list(d))
-        {
-            COV <- var(d)
-        } else {
-            COV <- cov(d)
-        }
-    }
+    #toRemove <<- NULL
+    COV <- cov(as.matrix(d))
+    # if(det(COV) < 10 ^ (-5))
+    # {
+    #     # account for perfect multicollinearity
+    #     for(k in 1:(ncol(d) - 1))
+    #     {
+    #         for(l in (k + 1):ncol(d))
+    #         {
+    #             if(cor(d[, k], d[, l]) > 0.8 & !(l %in% toRemove))
+    #             {
+    #                 toRemove <<- c(toRemove, l)
+    #             }
+    #         }
+    #     }
+    #     d <- d[, -toRemove]
+    #     COV <- cov(as.matrix(d))
+    # }
     return(COV)
 }
 
-# read in all the STemp data
-origpath <- "./Original_Stemp_and_Z500_data/STemp_original_data/R\ data/"
-origYData <- list()
-for(i in 1:35)
-{
-    print(i)
-    filename <- paste(origpath, "ncep1.STemp.", 1978 + i, ".R.mat", sep = "")
-    origYData[[i]] <- readMat(filename)$STemp.dy
-    if(dim(origYData[[i]])[1] == 366)
-    {
-        origYData[[i]] <- origYData[[i]][-366, , ]
-    }
-}
+# load the data if not already done so
+if(!exists("origYData"))
+    source("loadData.R")
 
 # for each year
 year = 1979
@@ -151,10 +129,6 @@ year = 1979
 # for each day
 day = 3
 data <- origYData[[year - 1978]][day, , ]
-dataM1 <- origYData[[year - 1978]][day - 1, , ]  # minus 1
-dataM2 <- origYData[[year - 1978]][day - 2, , ]
-dataP1 <- origYData[[year - 1978]][day + 1, , ]
-dataP2 <- origYData[[year - 1978]][day + 2, , ]  # plus 2
 
 # create object to color
 resToday <- matrix (0, 73, 144)
@@ -170,17 +144,14 @@ for (i1 in 1:73){
                 if(j2 > 144){
                     j2 = 144
                 }
-                rectGrid <- data.frame(lat = numeric(), long = numeric(),
+                rectGrid <- data.frame(lat = numeric(), 
+                                       long = numeric(),
                                        val = double())
                 for(i in i1:i2)
                 {
                     for(j in j1:j2)
                     {
                         rectGrid[nrow(rectGrid) + 1, ] = c(i, j, data[i, j])
-                        rectGrid[nrow(rectGrid) + 1, ] = c(i, j, dataM1[i, j])
-                        rectGrid[nrow(rectGrid) + 1, ] = c(i, j, dataM2[i, j])
-                        rectGrid[nrow(rectGrid) + 1, ] = c(i, j, dataP1[i, j])
-                        rectGrid[nrow(rectGrid) + 1, ] = c(i, j, dataP2[i, j])
                     }
                 }
                 MDsq <- calcMDsqFromMVG(rectGrid, meanBase, origYData, day,
@@ -201,21 +172,32 @@ for (i1 in 1:73){
 # do mapping transformations
 resToday <- t(resToday)
 resToday <- resToday[, ncol(resToday):1]
-resToday <- resToday * 100
-resToday <- round(resToday, 1)
 
 # map the result
 mapGriddedData(resToday, numCats = 21, catMethod = "diverging",
                colourPalette = "palette", borderCol = "black")
 
 # cut at 5% at both tails
-cutoff <- sort(abs(resToday), decreasing = T)[(0.05 * length(resToday))]
+cutoff <- sort(abs(resToday), decreasing = T)[(0.1 * length(resToday))]
 cutResToday <- resToday
 cutResToday[cutResToday < cutoff & cutResToday > -cutoff] = 0
 
 # map the result
 mapGriddedData(cutResToday, numCats = 21, catMethod = "diverging",
                colourPalette = "palette", borderCol = "black")
+
+negRange <- range(cutResToday[cutResToday < 0])
+posRange <- range(cutResToday[cutResToday > 0])
+cutResTodayPrime <- ifelse(cutResToday < 0,
+                      (cutResToday - negRange[1]) / 
+                          (negRange[2] - negRange[1]) *
+                          (-0.001 - (-1)) + (-1),
+                      cutResToday)
+cutResTodayPrime <- ifelse(cutResToday > 0,
+                           (cutResToday - posRange[1]) / 
+                               (posRange[2] - posRange[1]) *
+                               (1 - (0.001)) + (0.001),
+                           cutResTodayPrime)
 
 # write csv
 #write.table(resToday, filename, row.names = F, col.names = F, sep = ",")
