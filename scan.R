@@ -19,8 +19,7 @@ baselinepath <- paste("~/Google Drive/NCSU/STAC lab research/",
                       "Monster Ridges project/Data/CSVs/",
                       "Scanning_window/Baseline/", sep = "")
 meanBase <- readMat(paste(baselinepath, "meanBaseline.mat", sep = ""))$meanBase
-dir <- NULL # direction of extreme (warm or cold)
-toRemove <- NULL # vector that holds dimensions that are redundant and cause
+dir <- integer(1) # direction of extreme (warm (1) or cold (-1))
 # covariance matrix singularity
 p <- integer(1) # dimensionality of trimmed covariance matrix
 
@@ -42,29 +41,21 @@ calcMDsqFromMVG <- function(rectGrid, meanBase, origYData, day, data)
     # Returns
     # MD: Mahalanobis distance of rectangle observation from baseline
     # dir: not returned, but explicitly sets direction of extreme
-    COV = covBaseRectScore(rectGrid, origYData, day)
     x <- sapply(1:nrow(rectGrid), FUN = function(i, a, b) b[a[i, 1], a[i, 2]],
                 rectGrid, data)
     mu <- sapply(1:nrow(rectGrid),
                  FUN = function(i, a, b, c) b[c, a[i, 1], a[i, 2]],
                  rectGrid, meanBase, day)
-    # if(length(toRemove) != 0)
-    # {
-    #     x <- x[-toRemove]
-    #     mu <- mu[-toRemove]
-    #     rG <- rectGrid[-toRemove, ]
-    # }else
-         rG <- rectGrid
-    p <<- length(mu)
     # if window spans warm and cold extremes (Quadrants II or IV), skip
-    if(!(all((rG[, 3] - mu) >= 0) |
-             all((rG[, 3] - mu) <= 0)))
+    if(!(all((rectGrid[, 3] - mu) >= 0) |
+             all((rectGrid[, 3] - mu) <= 0)))
     {
         p <<- 0
         return(0)
     }
     # find direction of anomalous behavior
-    dir <<- ifelse(mean(rG[, 3]) > mean(mu), 1, -1)
+    dir <<- ifelse(mean(rectGrid[, 3]) > mean(mu), 1, -1)
+    COV = covBaseRectScore(rectGrid, origYData, day)
     iCOV <- pseudoinverse(COV)
     MDsq <- mahalanobis(x, center = mu, cov = iCOV, inverted = TRUE) 
     # squared mahalanobis distance
@@ -85,8 +76,6 @@ covBaseRectScore <- function(rectGrid, origYData, day)
     #
     # Returns
     # COV: covariance matrix
-    # toRemove: not returned, but sets the grid boxes to remove from 
-    # consideration because of multicollinearity
     d <- matrix(, nrow = 175)
     for(g in 1:nrow(rectGrid))
     {
@@ -98,24 +87,7 @@ covBaseRectScore <- function(rectGrid, origYData, day)
         d <- cbind(d, x)
     }
     d <- d[, -1]
-    #toRemove <<- NULL
     COV <- cov(as.matrix(d))
-    # if(det(COV) < 10 ^ (-5))
-    # {
-    #     # account for perfect multicollinearity
-    #     for(k in 1:(ncol(d) - 1))
-    #     {
-    #         for(l in (k + 1):ncol(d))
-    #         {
-    #             if(cor(d[, k], d[, l]) > 0.8 & !(l %in% toRemove))
-    #             {
-    #                 toRemove <<- c(toRemove, l)
-    #             }
-    #         }
-    #     }
-    #     d <- d[, -toRemove]
-    #     COV <- cov(as.matrix(d))
-    # }
     return(COV)
 }
 
@@ -154,6 +126,7 @@ for (i1 in 1:73){
                         rectGrid[nrow(rectGrid) + 1, ] = c(i, j, data[i, j])
                     }
                 }
+                p <- nrow(rectGrid)
                 MDsq <- calcMDsqFromMVG(rectGrid, meanBase, origYData, day,
                                       data)
                 v = ifelse(p == 0, 0, pchisq(MDsq, p))
@@ -174,11 +147,11 @@ resToday <- t(resToday)
 resToday <- resToday[, ncol(resToday):1]
 
 # map the result
-mapGriddedData(resToday, numCats = 21, catMethod = "diverging",
-               colourPalette = "palette", borderCol = "black")
+# mapGriddedData(resToday, numCats = 21, catMethod = "diverging",
+#                colourPalette = "palette", borderCol = "black")
 
 # cut at 5% at both tails
-cutoff <- sort(abs(resToday), decreasing = T)[(0.1 * length(resToday))]
+cutoff <- sort(abs(resToday), decreasing = T)[(0.05 * length(resToday))]
 cutResToday <- resToday
 cutResToday[cutResToday < cutoff & cutResToday > -cutoff] = 0
 
@@ -186,6 +159,7 @@ cutResToday[cutResToday < cutoff & cutResToday > -cutoff] = 0
 mapGriddedData(cutResToday, numCats = 21, catMethod = "diverging",
                colourPalette = "palette", borderCol = "black")
 
+# linearly stretch the values to [-1, 1] scale
 negRange <- range(cutResToday[cutResToday < 0])
 posRange <- range(cutResToday[cutResToday > 0])
 cutResTodayPrime <- ifelse(cutResToday < 0,
@@ -198,13 +172,9 @@ cutResTodayPrime <- ifelse(cutResToday > 0,
                                (posRange[2] - posRange[1]) *
                                (1 - (0.001)) + (0.001),
                            cutResTodayPrime)
+# map the result
+mapGriddedData(cutResTodayPrime, numCats = 21, catMethod = "diverging",
+               colourPalette = "palette", borderCol = "black")
 
 # write csv
 #write.table(resToday, filename, row.names = F, col.names = F, sep = ",")
-
-# > mahalanobis(c(2.2567, 2.2567), center = c(0, 0), cov = matrix(c(1, 0.7, 0.7, 1), 2, 2))
-# [1] 5.991406
-# > qchisq(0.95, 2)
-# [1] 5.991465
-# > pchisq(5.991465, 2) # MD^2 is chi-squared distributed!
-# [1] 0.95
