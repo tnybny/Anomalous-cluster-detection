@@ -6,10 +6,10 @@
 rm(list = ls(all = T))
 
 # load required libraries
-require(R.matlab)
-require(rworldmap)
-require(colorspace)
-require(corpcor)
+require(R.matlab) # for mat files
+require(rworldmap) # for mapping
+require(colorspace) # for legend
+require(corpcor) # for pseudoinverse
 
 # set the color palette
 palette(diverge_hsv(21))
