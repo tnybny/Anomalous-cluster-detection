@@ -55,6 +55,6 @@ L <- list(meanBaseline[d - 2, , ], meanBaseline[d - 1, , ], meanBaseline[d, , ])
 meanBaseline[d, , ] <- apply(simplify2array(L), 1:2, mean)
 
 # write mean to file
-writeMat(con = paste("../../../CSVs/Scanning_window/",
+writeMat(con = paste("~/Documents/Scanning window/",
                                        "Baseline/meanBaseline.mat", sep = ""),
          meanBase = meanBaseline)
