@@ -23,7 +23,7 @@ g <- g + geom_segment(aes(x = -1.96, y = -0.1, xend = -1.96, yend = 0.1)) +
 
 # add 95% confidence ellipse andn title
 g <- g + stat_ellipse(type = "norm", data = d, aes(x = x1, y = x2)) +
-    ggtitle("Two independent variables") + coord_fixed()
+    coord_fixed() 
 g
 
 # now add some correlation
@@ -45,8 +45,7 @@ h <- h + geom_segment(aes(x = -2, y = -0.1, xend = -2, yend = 0.1), col = "red")
 
 # add 95% confidence ellipse and title
 h <- h + stat_ellipse(type = "norm") +
-    geom_vline(xintercept = 0) + geom_hline(yintercept = 0) +
-    ggtitle("Bivariate Gaussian with correlation = 0.7")
+    geom_vline(xintercept = 0) + geom_hline(yintercept = 0)
 
 # add demo points
 h <- h + 

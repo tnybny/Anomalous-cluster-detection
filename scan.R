@@ -52,7 +52,7 @@ calcMDsqFromMVG <- function(rectGrid, meanBase, origYData, day, data)
     }
     # find direction of anomalous behavior
     dir <<- ifelse(mean(rectGrid[, 3]) > mean(mu), 1, -1)
-    COV = covBaseRectScore(rectGrid, origYData, day)
+    COV <- covBaseRectScore(rectGrid, origYData, day)
     iCOV <- pseudoinverse(COV)
     MDsq <- mahalanobis(x, center = mu, cov = iCOV, inverted = TRUE) 
     # squared mahalanobis distance
@@ -76,9 +76,8 @@ covBaseRectScore <- function(rectGrid, origYData, day)
     d <- matrix(0, nrow = 175)
     for(g in 1:nrow(rectGrid))
     {
-        lat = rectGrid[g, 1]
-        long = rectGrid[g, 2]
-        x <- NULL
+        lat <- rectGrid[g, 1]
+        long <- rectGrid[g, 2]
         timeWindow <- (day - 2):(day + 2)
         x <- unlist(lapply(origYData, "[", timeWindow, lat, long)) # 175 values
         d <- cbind(d, x)
@@ -93,8 +92,8 @@ if(!exists("origYData"))
     source("loadData.R")
 
 # ten random days in the period of record
-years <- c(1985, 1982, 1979, 1999, 1988, 2013, 2011, 1988, 1993, 1994)
-days <- c(360, 77, 269, 203, 219, 89, 167, 169, 143, 92)
+years <- c(1979)
+days <- c(3)
 
 plotpath <- paste("~/Documents/Scanning window/TenRandomDaysPlots/plot%02d.jpg")
 #jpeg(plotpath, width = 1024, height = 1024)
@@ -112,11 +111,11 @@ for(it in 1:length(days)){
         for (j1 in 1:144){
             for (i2 in i1:(i1 + 2)){
                 if(i2 > 73){
-                    i2 = 73
+                    i2 <- 73
                 }
                 for (j2 in j1:(j1 + 2)){
                     if(j2 > 144){
-                        j2 = 144
+                        j2 <- 144
                     }
                     rectGrid <- data.frame(lat = numeric(), 
                                            long = numeric(),
@@ -125,19 +124,19 @@ for(it in 1:length(days)){
                     {
                         for(j in j1:j2)
                         {
-                            rectGrid[nrow(rectGrid) + 1, ] = c(i, j, data[i, j])
+                            rectGrid[nrow(rectGrid) + 1, ] <- c(i, j, data[i, j])
                         }
                     }
                     p <- nrow(rectGrid) # number of grid cells in window
                     MDsq <- calcMDsqFromMVG(rectGrid, meanBase, origYData, day,
                                             data)
-                    v = ifelse(p == 0, 0, pchisq(MDsq, p))
+                    v <- ifelse(p == 0, 0, pchisq(MDsq, p))
                     # color the grid boxes with value = +-MD
                     for(g in 1:nrow(rectGrid))
                     {
-                        val = max(abs(resToday[rectGrid[g, 1], rectGrid[g, 2]]),
+                        val <- max(abs(resToday[rectGrid[g, 1], rectGrid[g, 2]]),
                                   v)
-                        resToday[rectGrid[g, 1], rectGrid[g, 2]] = dir * val
+                        resToday[rectGrid[g, 1], rectGrid[g, 2]] <- dir * val
                     }
                 }
             }
