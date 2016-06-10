@@ -96,7 +96,7 @@ years <- c(1979)
 days <- c(3)
 
 plotpath <- paste("~/Documents/Scanning window/TenRandomDaysPlots/plot%02d.jpg")
-#jpeg(plotpath, width = 1024, height = 1024)
+jpeg(plotpath, width = 1024, height = 680)
 
 for(it in 1:length(days)){
     year <- years[it]
@@ -147,18 +147,10 @@ for(it in 1:length(days)){
     resToday <- t(resToday)
     resToday <- resToday[, ncol(resToday):1]
     
-    # map the result
-    # mapGriddedData(resToday, numCats = 21, catMethod = "diverging",
-    #                colourPalette = "palette", borderCol = "black")
-    
     # cut at 5% at both tails
     cutoff <- sort(abs(resToday), decreasing = T)[(0.05 * length(resToday))]
     cutResToday <- resToday
     cutResToday[cutResToday < cutoff & cutResToday > -cutoff] = 0
-    
-    # map the result
-    # mapGriddedData(cutResToday, numCats = 21, catMethod = "diverging",
-    #                colourPalette = "palette", borderCol = "black")
     
     # linearly stretch the values to [-1, 1] scale
     negRange <- range(cutResToday[cutResToday < 0])
@@ -179,4 +171,4 @@ for(it in 1:length(days)){
                    colourPalette = "palette", borderCol = "black")
 }
 
-#dev.off()
+dev.off()

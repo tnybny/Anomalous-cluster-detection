@@ -3,3 +3,6 @@
 .Rproj.user
 *.Rproj
 allplots/
+RussianHeatWave/
+ChicagoHeatWave/
+*.mp4
