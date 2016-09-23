@@ -1,12 +1,18 @@
+# Author: Bharathkumar Ramachandra/tnybny
+# this file tests random windows for normality
+
+# clear workspace
 rm(list = ls(all = T))
 
+# load required libraries
 require(MVN)
 
 # load the data if not already done so
 if(!exists("origYData"))
     source("loadData.R")
 
-n <- 100
+n <- 100 # number of windows to test
+# randomly sample time and space indices
 years <- sample(1979:2013, n, replace = T)
 days <- sample(3:363, n, replace = T)
 lats <- sample(3:70, n, replace = T)
@@ -24,6 +30,7 @@ for(i in 1:n)
     j1 <- long
     i2 <- i1 + 1
     j2 <- j1 + 1
+    # rectGrid is the current window under observation
     rectGrid <- data.frame(lat = numeric(), 
                            long = numeric(),
                            val = double())
@@ -34,7 +41,7 @@ for(i in 1:n)
             rectGrid[nrow(rectGrid) + 1, ] <- c(i, j, data[i, j])
         }
     }
-    d <- matrix(0, nrow = 175)
+    d <- matrix(0, nrow = 175) # d holds the data that needs to be tested for normality
     for(g in 1:nrow(rectGrid))
     {
         lat <- rectGrid[g, 1]
