@@ -51,4 +51,5 @@ h <- h + stat_ellipse(type = "norm") +
 h <- h + 
     geom_point(x = 2.08, y = 1.9, color = "green", size = 4, shape = 18) + 
     geom_point(x = -0.1, y = -1.90, color = "magenta", size = 4, shape = 18)
-h
+h + annotate("text", x = 1.8, y = 1.9, label = "1", col = "red", size = 8) +
+    annotate("text", x = -0.4, y = -1.8, label = "2", col = "red", size = 8)

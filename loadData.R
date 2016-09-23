@@ -1,6 +1,8 @@
 # Author: Bharathkumar Ramachandra/tnybny
 # this file jsut reads in all the temperature data
 
+require(R.matlab)
+
 # read in all the STemp data
 origpath <- paste("~/Google Drive/NCSU/STAC lab research/",
                   "Monster Ridges project/Data/Original_Stemp_and_Z500_data/",
