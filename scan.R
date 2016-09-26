@@ -14,35 +14,53 @@ require(corpcor) # for pseudoinverse
 # set the color palette
 palette(diverge_hsv(21))
 
-# load the baseline
-baselinepath <- paste("~/Documents/Scanning window/Baseline/", sep = "")
-meanBase <- readMat(paste(baselinepath, "meanBaseline.mat", sep = ""))$meanBase
 dir <- integer(1) # direction of extreme (warm (1) or cold (-1))
 p <- integer(1) # dimensionality of trimmed covariance matrix
 
-calcMDsqFromMVG <- function(rectGrid, meanBase, origYData, day, data)
+calcMDsqFromMVG <- function(rectGrid, origYData, day, data)
 {
     # calculates the parameters of the baseline multivariate normal that
     # corresponds to the rectangle under investigation, then calculates the 
-    # mahalanobis distance of current observation from that
+    # mahalanobis distance of current observation from that MVG
     #
     # Args
     # rectGrid: data frame containing information about the rectangle under
     # investigation
-    # meanBase: pre-computed long term mean Baseline
     # origYdata: original data for all years in order to facilitate calculation
     # of covariance matrix of baseline distribution
     # day: current day under consideration
     # data: the data corresponding to the current day
     #
     # Returns
-    # MD: Mahalanobis distance of rectangle observation from baseline
+    # MDsq: Squared Mahalanobis distance of rectangle observation from MVG
     # dir: not returned, but explicitly sets direction of extreme
-    x <- sapply(1:nrow(rectGrid), FUN = function(i, a, b) b[a[i, 1], a[i, 2]],
+    
+    # find out current vector under the window
+    currObs <- sapply(1:nrow(rectGrid), FUN = function(i, a, b) b[a[i, 1],
+                                                                  a[i, 2]],
                 rectGrid, data)
-    mu <- sapply(1:nrow(rectGrid),
-                 FUN = function(i, a, b, c) b[c, a[i, 1], a[i, 2]],
-                 rectGrid, meanBase, day)
+    # gather data under spatio-temporal cuboid specified by window in d
+    d <- matrix(0, nrow = 175)
+    for(g in 1:nrow(rectGrid))
+    {
+        lat <- rectGrid[g, 1]
+        long <- rectGrid[g, 2]
+        timeWindow <- (day - 2):(day + 2)
+        y <- unlist(lapply(origYData, "[", timeWindow, lat, long)) # 175 values
+        d <- cbind(d, y)
+    }
+    d <- d[, -1]
+    # remove from d the observation that's currently under inspection for
+    # anomalous behavior so that estimates aren't biased
+    if(nrow(rectGrid) == 1)
+    {
+        d <- d[-which(d == currObs)]
+        mu <- mean(d)
+    } else {
+        matchidx <- apply(d, 1, FUN = function(obs) all(obs == rectGrid[, 3]))
+        d <- d[-which(matchidx), ]
+        mu <- colMeans(d)
+    }
     # if window spans warm and cold extremes (Quadrants II or IV), skip
     if(!(all((rectGrid[, 3] - mu) >= 0) |
          all((rectGrid[, 3] - mu) <= 0)))
@@ -52,39 +70,11 @@ calcMDsqFromMVG <- function(rectGrid, meanBase, origYData, day, data)
     }
     # find direction of anomalous behavior
     dir <<- ifelse(mean(rectGrid[, 3]) > mean(mu), 1, -1)
-    COV <- covBaseRectScore(rectGrid, origYData, day)
+    COV <- cov(as.matrix(d)) # covariance matrix
     iCOV <- pseudoinverse(COV)
-    MDsq <- mahalanobis(x, center = mu, cov = iCOV, inverted = TRUE) 
     # squared mahalanobis distance
+    MDsq <- mahalanobis(currObs, center = mu, cov = iCOV, inverted = TRUE) 
     return(MDsq)
-}
-
-covBaseRectScore <- function(rectGrid, origYData, day)
-{
-    # computes the covariance matrix for the baseline corresponding to the
-    # rectangle under consideration
-    #
-    # Args
-    # rectGrid: data frame containing information about the rectangle under
-    # investigation
-    # origYdata: original data for all years in order to facilitate calculation
-    # of covariance matrix of baseline distribution
-    # day: current day under consideration
-    #
-    # Returns
-    # COV: covariance matrix
-    d <- matrix(0, nrow = 175)
-    for(g in 1:nrow(rectGrid))
-    {
-        lat <- rectGrid[g, 1]
-        long <- rectGrid[g, 2]
-        timeWindow <- (day - 2):(day + 2)
-        x <- unlist(lapply(origYData, "[", timeWindow, lat, long)) # 175 values
-        d <- cbind(d, x)
-    }
-    d <- d[, -1]
-    COV <- cov(as.matrix(d))
-    return(COV)
 }
 
 # load the data if not already done so
@@ -92,10 +82,10 @@ if(!exists("origYData"))
     source("loadData.R")
 
 # ten random days in the period of record
-years <- c(1979)
-days <- c(3)
+years <- c(1985, 1982, 1979, 1999, 1988, 2013, 2011, 1988, 1993, 1979)
+days <- c(362, 79, 271, 205, 221, 91, 169, 171, 145, 3)
 
-plotpath <- paste("~/Documents/Scanning window/TenRandomDaysPlots/plot%02d.jpg")
+plotpath <- paste("~/Documents/Scanning window/RandomDaysPlots/plot%02d.jpg")
 jpeg(plotpath, width = 1024, height = 680)
 
 for(it in 1:length(days)){
@@ -124,18 +114,19 @@ for(it in 1:length(days)){
                     {
                         for(j in j1:j2)
                         {
-                            rectGrid[nrow(rectGrid) + 1, ] <- c(i, j, data[i, j])
+                            rectGrid[nrow(rectGrid) + 1, ] <- c(i, j,
+                                                                data[i, j])
                         }
                     }
-                    p <- nrow(rectGrid) # number of grid cells in window
-                    MDsq <- calcMDsqFromMVG(rectGrid, meanBase, origYData, day,
+                    p <- nrow(rectGrid) # no. of grid cells in window / dimensionality
+                    MDsq <- calcMDsqFromMVG(rectGrid, origYData, day,
                                             data)
-                    v <- ifelse(p == 0, 0, pchisq(MDsq, p))
-                    # color the grid boxes with value = +-MD
+                    Pr <- ifelse(p == 0, 0, pchisq(MDsq, p))
+                    # color the grid boxes with value = +-Pr
                     for(g in 1:nrow(rectGrid))
                     {
-                        val <- max(abs(resToday[rectGrid[g, 1], rectGrid[g, 2]]),
-                                  v)
+                        val <- max(abs(resToday[rectGrid[g, 1],
+                                                rectGrid[g, 2]]), Pr)
                         resToday[rectGrid[g, 1], rectGrid[g, 2]] <- dir * val
                     }
                 }
