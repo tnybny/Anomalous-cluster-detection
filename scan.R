@@ -35,10 +35,8 @@ calcMDsqFromMVG <- function(rectGrid, origYData, day, data)
     # MDsq: Squared Mahalanobis distance of rectangle observation from MVG
     # dir: not returned, but explicitly sets direction of extreme
     
-    # find out current vector under the window
-    currObs <- sapply(1:nrow(rectGrid), FUN = function(i, a, b) b[a[i, 1],
-                                                                  a[i, 2]],
-                rectGrid, data)
+    # current observed vector under the window
+    currObs <- rectGrid[, 3]
     # gather data under spatio-temporal cuboid specified by window in d
     d <- matrix(0, nrow = 175)
     for(g in 1:nrow(rectGrid))
@@ -57,7 +55,7 @@ calcMDsqFromMVG <- function(rectGrid, origYData, day, data)
         d <- d[-which(d == currObs)]
         mu <- mean(d)
     } else {
-        matchidx <- apply(d, 1, FUN = function(obs) all(obs == rectGrid[, 3]))
+        matchidx <- apply(d, 1, FUN = function(obs) all(obs == currObs))
         d <- d[-which(matchidx), ]
         mu <- colMeans(d)
     }
@@ -82,8 +80,8 @@ if(!exists("origYData"))
     source("loadData.R")
 
 # ten random days in the period of record
-years <- c(1985, 1982, 1979, 1999, 1988, 2013, 2011, 1988, 1993, 1979)
-days <- c(362, 79, 271, 205, 221, 91, 169, 171, 145, 3)
+years <- c(1979)
+days <- c(3)
 
 plotpath <- paste("~/Documents/Scanning window/RandomDaysPlots/plot%02d.jpg")
 jpeg(plotpath, width = 1024, height = 680)
