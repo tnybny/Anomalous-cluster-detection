@@ -1,8 +1,6 @@
 # Anomalous cluster detection using a scanning window and Mahalanobis distance
 
-This project will focus on an approach to detect anomalous clusters in gridded climate data by accounting for spatial and temporal autocorrelations.
-
-baselineCreation.R pre-calculates 5-day long-term means and writes them to file.
+This project will focus on an approach to detect anomalous clusters in gridded data by accounting for spatial and temporal autocorrelations.
 
 mahalanobisDistCorrection.R explores the property of sum of squared Mahalanobis distances being equal to p*(n-1) where p is the dimensionality and n is the number of data points. This property is not essential to the procedure.
 

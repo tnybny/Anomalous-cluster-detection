@@ -11,14 +11,16 @@ require(MVN)
 if(!exists("origYData"))
     source("loadData.R")
 
-n <- 100 # number of windows to test
+n <- 1000 # number of windows to test
 # randomly sample time and space indices
 years <- sample(1979:2013, n, replace = T)
 days <- sample(3:363, n, replace = T)
-lats <- sample(3:70, n, replace = T)
+lats <- sample(15:58, n, replace = T)
 longs <- sample(3:141, n, replace = T)
 
 ret <- vector()
+p.values.skewness <- vector()
+p.values.kurtosis <- vector()
 for(i in 1:n)
 {
     year <- years[i]
@@ -67,21 +69,24 @@ for(i in 1:n)
         }
     }
     if(length(toremove))
-        d <- d[,-toremove]
+        d <- d[, -toremove]
     if(length(toremove) == 3)
     {
         a <- shapiro.test(d)
-        if(a$p.value <= 0.05)
+        if(a$p.value <= 0.01)
             ret <- c(ret, 0) # not normal
         else
             ret <- c(ret, 1) # normal
     } else {
         a <- mardiaTest(d)
-        if(a@p.value.skew > 0.05 && a@p.value.kurt > 0.05)
+        p.values.kurtosis <- c(p.values.kurtosis, a@p.value.kurt)
+        p.values.skewness <- c(p.values.skewness, a@p.value.skew)
+        if(a@p.value.skew > 0.01 && a@p.value.kurt > 0.01)
             ret <- c(ret, 1) # normal
         else
             ret <- c(ret, 0) # not normal
     }
 }
 
-# passes 36% of times
+print(sum(ret == 1))
+# passes around 55% of times for dimensionality 4 at 1% significance level
