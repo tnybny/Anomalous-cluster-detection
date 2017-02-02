@@ -1,5 +1,5 @@
 # Author: Bharathkumar Ramachandra/tnybny
-# this file jsut reads in all the temperature data
+# this file just reads in all the temperature data
 
 require(R.matlab)
 
@@ -14,7 +14,6 @@ for(i in 1:35)
     origYData[[i]] <- readMat(filename)$STemp.dy
     if(dim(origYData[[i]])[1] == 366)
     {
-        origYData[[i]] <- origYData[[i]][-366, , ] # just drop the last day for
-        # leap years
+        origYData[[i]] <- origYData[[i]][-366, , ] # account for leap years
     }
 }
