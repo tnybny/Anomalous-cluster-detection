@@ -15,7 +15,6 @@ require(corpcor) # for pseudoinverse
 palette(diverge_hsv(21))
 
 dir <- integer(1) # direction of extreme (warm (1) or cold (-1))
-p <- integer(1) # dimensionality of trimmed covariance matrix
 
 calcMDsqFromMVG <- function(rectGrid, origYData, day)
 {
@@ -56,7 +55,6 @@ calcMDsqFromMVG <- function(rectGrid, origYData, day)
     if(!(all((currObs - mu) >= 0) |
          all((currObs - mu) <= 0)))
     {
-        p <<- 0
         return(0)
     }
     # find direction of anomalous behavior
