@@ -44,11 +44,11 @@ calcMDsqFromMVG <- function(rectGrid, origYData, day)
     # anomalous behavior so that mean and covariance estimates aren't biased
     if(nrow(rectGrid) == 1)
     {
-        d <- d[-which(d == currObs)]
+        d <- d[-which(d == currObs)[1]]
         mu <- mean(d)
     } else {
         matchidx <- apply(d, 1, FUN = function(obs) all(obs == currObs))
-        d <- d[-matchidx, ]
+        d <- d[-which(matchidx)[1], ]
         mu <- colMeans(d)
     }
     # if window spans warm and cold extremes (Quadrants II or IV), skip
@@ -69,9 +69,9 @@ calcMDsqFromMVG <- function(rectGrid, origYData, day)
 if(!exists("origYData"))
     source("loadData.R")
 
-# ten random days in the period of record
-years <- 1985:2010
-days <- 1:361
+# period of record
+years <- 1979
+days <- 3
 
 plotpath <- paste("./allplots/plot%02d.jpg")
 jpeg(plotpath, width = 1024, height = 680)

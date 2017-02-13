@@ -14,6 +14,13 @@ testNormality.R selects a set of random points in space and time, considers a wi
 
 explainingSeasonality.R attemps to highlight that a 5-day temporal window is almost flat even though there is high seasonality through the year, allowing the temperature fluctuations around a given day to be modeled roughly as a Gaussian.
 
+scanNaturalImages.R runs the algorithm on a pedestrian video dataset [2].
+
+subsample.R has some helpper functions to subsample a matrix to a different size using bilinear interpolation.
+
+fastScan.R does some loop optimizations over scan.R to improve runtime.
+
+
 ## Collaborators:
 tnybny
 
@@ -24,3 +31,4 @@ tnybny@gmail.com
 
 ##References:
 1) Kalnay, Eugenia, et al. "The NCEP/NCAR 40-year reanalysis project." Bulletin of the American meteorological Society 77.3 (1996): 437-471.
+2) Mahadevan, Vijay, et al. "Anomaly detection in crowded scenes." Computer Vision and Pattern Recognition (CVPR), 2010 IEEE Conference on. IEEE, 2010.
